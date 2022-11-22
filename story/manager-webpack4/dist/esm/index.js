@@ -26,7 +26,6 @@ import "core-js/modules/es.string.iterator.js";
 import "core-js/modules/web.dom-collections.iterator.js";
 import "core-js/modules/es.function.name.js";
 import "core-js/modules/web.dom-collections.for-each.js";
-import "core-js/modules/es.object.assign.js";
 import "core-js/modules/es.symbol.iterator.js";
 import "core-js/modules/es.array.slice.js";
 import "core-js/modules/es.array.from.js";
@@ -60,7 +59,7 @@ import { clearManagerCache, useManagerCache } from './utils/manager-cache';
 import { getPrebuiltDir } from './utils/prebuilt-manager';
 var compilation;
 var reject;
-export var WEBPACK_VERSION = '4';
+export var WEBPACK_VERSION = '5';
 export var getConfig = getManagerWebpackConfig;
 export var makeStatsFromError = function makeStatsFromError(err) {
   return {
@@ -268,7 +267,7 @@ var starter = /*#__PURE__*/function () {
 
           case 15:
             if (!options.cache) {
-              _context3.next = 54;
+              _context3.next = 50;
               break;
             }
 
@@ -280,42 +279,34 @@ var starter = /*#__PURE__*/function () {
           case 18:
             packageFile = _context3.sent;
             _context3.next = 21;
-            return;
-
-          case 21:
-            _context3.next = 23;
             return _awaitAsyncGenerator(fs.readJSON(packageFile));
 
-          case 23:
+          case 21:
             _yield$_awaitAsyncGen = _context3.sent;
             storybookVersion = _yield$_awaitAsyncGen.version;
-            _context3.next = 27;
-            return;
-
-          case 27:
             cacheKey = "managerConfig-webpack".concat(WEBPACK_VERSION, "@").concat(storybookVersion);
 
             if (!options.managerCache) {
-              _context3.next = 44;
+              _context3.next = 40;
               break;
             }
 
-            _context3.next = 31;
+            _context3.next = 27;
             return _awaitAsyncGenerator(Promise.all([// useManagerCache sets the cache, so it must run even if outputDir doesn't exist yet,
             // otherwise the 2nd run won't be able to use the manager built on the 1st run.
             useManagerCache(cacheKey, options, config), fs.pathExists(options.outputDir)]));
 
-          case 31:
+          case 27:
             _yield$_awaitAsyncGen2 = _context3.sent;
             _yield$_awaitAsyncGen3 = _slicedToArray(_yield$_awaitAsyncGen2, 2);
             useCache = _yield$_awaitAsyncGen3[0];
             hasOutput = _yield$_awaitAsyncGen3[1];
-            _context3.next = 37;
+            _context3.next = 33;
             return;
 
-          case 37:
+          case 33:
             if (!(useCache && hasOutput && !options.smokeTest)) {
-              _context3.next = 42;
+              _context3.next = 38;
               break;
             }
 
@@ -325,52 +316,52 @@ var starter = /*#__PURE__*/function () {
             router.use('/', express.static(options.outputDir));
             return _context3.abrupt("return");
 
-          case 42:
-            _context3.next = 54;
+          case 38:
+            _context3.next = 50;
             break;
 
-          case 44:
+          case 40:
             _context3.t0 = !options.smokeTest;
 
             if (!_context3.t0) {
-              _context3.next = 49;
+              _context3.next = 45;
+              break;
+            }
+
+            _context3.next = 44;
+            return _awaitAsyncGenerator(clearManagerCache(cacheKey, options));
+
+          case 44:
+            _context3.t0 = _context3.sent;
+
+          case 45:
+            if (!_context3.t0) {
+              _context3.next = 50;
               break;
             }
 
             _context3.next = 48;
-            return _awaitAsyncGenerator(clearManagerCache(cacheKey, options));
-
-          case 48:
-            _context3.t0 = _context3.sent;
-
-          case 49:
-            if (!_context3.t0) {
-              _context3.next = 54;
-              break;
-            }
-
-            _context3.next = 52;
             return;
 
-          case 52:
+          case 48:
             logger.line(1); // force starting new line
 
             logger.info('=> Cleared cached manager config');
 
-          case 54:
-            _context3.next = 56;
+          case 50:
+            _context3.next = 52;
             return _awaitAsyncGenerator(executor.get(options));
 
-          case 56:
+          case 52:
             webpackInstance = _context3.sent;
-            _context3.next = 59;
+            _context3.next = 55;
             return;
 
-          case 59:
+          case 55:
             compiler = webpackInstance(config);
 
             if (compiler) {
-              _context3.next = 64;
+              _context3.next = 60;
               break;
             }
 
@@ -383,56 +374,55 @@ var starter = /*#__PURE__*/function () {
               stats: makeStatsFromError(err)
             });
 
-          case 64:
-            _context3.next = 66;
+          case 60:
+            _context3.next = 62;
             return _awaitAsyncGenerator(useProgressReporting(router, startTime, options));
 
-          case 66:
+          case 62:
             _yield$_awaitAsyncGen4 = _context3.sent;
             handler = _yield$_awaitAsyncGen4.handler;
             modulesCount = _yield$_awaitAsyncGen4.modulesCount;
-            _context3.next = 71;
+            _context3.next = 67;
             return;
 
-          case 71:
+          case 67:
             new ProgressPlugin({
               handler: handler,
               modulesCount: modulesCount
             }).apply(compiler);
             middlewareOptions = {
               publicPath: (_config$output = config.output) === null || _config$output === void 0 ? void 0 : _config$output.publicPath,
-              writeToDisk: true,
-              watchOptions: config.watchOptions || {}
+              writeToDisk: true
             };
             compilation = webpackDevMiddleware(compiler, middlewareOptions);
             router.use(compilation);
-            _context3.next = 77;
+            _context3.next = 73;
             return _awaitAsyncGenerator(new Promise(function (ready, stop) {
               compilation.waitUntilValid(ready);
               reject = stop;
             }));
 
-          case 77:
+          case 73:
             stats = _context3.sent;
-            _context3.next = 80;
+            _context3.next = 76;
             return;
 
-          case 80:
+          case 76:
             if (stats) {
-              _context3.next = 82;
+              _context3.next = 78;
               break;
             }
 
             throw new Error('no stats after building manager');
 
-          case 82:
+          case 78:
             return _context3.abrupt("return", {
               bail: bail,
               stats: stats,
               totalTime: process.hrtime(startTime)
             });
 
-          case 83:
+          case 79:
           case "end":
             return _context3.stop();
         }
@@ -493,7 +483,7 @@ export var start = /*#__PURE__*/function () {
 
 var builder = /*#__PURE__*/function () {
   var _builderGeneratorFn = _wrapAsyncGenerator( /*#__PURE__*/regeneratorRuntime.mark(function _callee5(_ref4) {
-    var startTime, options, webpackInstance, config, statsOptions, compiler, err;
+    var startTime, options, webpackInstance, config, compiler, err;
     return regeneratorRuntime.wrap(function _callee5$(_context5) {
       while (1) {
         switch (_context5.prev = _context5.next) {
@@ -518,11 +508,10 @@ var builder = /*#__PURE__*/function () {
             return;
 
           case 12:
-            statsOptions = typeof config.stats === 'boolean' ? 'minimal' : config.stats;
             compiler = webpackInstance(config);
 
             if (compiler) {
-              _context5.next = 18;
+              _context5.next = 17;
               break;
             }
 
@@ -530,11 +519,11 @@ var builder = /*#__PURE__*/function () {
             logger.error(err);
             return _context5.abrupt("return", Promise.resolve(makeStatsFromError(err)));
 
-          case 18:
-            _context5.next = 20;
+          case 17:
+            _context5.next = 19;
             return;
 
-          case 20:
+          case 19:
             return _context5.abrupt("return", new Promise(function (succeed, fail) {
               compiler.run(function (error, stats) {
                 if (error || !stats || stats.hasErrors()) {
@@ -545,39 +534,45 @@ var builder = /*#__PURE__*/function () {
                   }
 
                   if (stats && (stats.hasErrors() || stats.hasWarnings())) {
-                    var _stats$toJson = stats.toJson(statsOptions),
-                        warnings = _stats$toJson.warnings,
-                        errors = _stats$toJson.errors;
+                    var _stats$toJson = stats.toJson({
+                      warnings: true,
+                      errors: true
+                    }),
+                        _stats$toJson$warning = _stats$toJson.warnings,
+                        warnings = _stats$toJson$warning === void 0 ? [] : _stats$toJson$warning,
+                        _stats$toJson$errors = _stats$toJson.errors,
+                        errors = _stats$toJson$errors === void 0 ? [] : _stats$toJson$errors;
 
                     errors.forEach(function (e) {
-                      return logger.error(e);
+                      return logger.error(e.message);
                     });
                     warnings.forEach(function (e) {
-                      return logger.error(e);
+                      return logger.error(e.message);
                     });
                   }
 
                   process.exitCode = 1;
                   fail(error || stats);
                 } else {
-                  var _statsData$warnings;
-
                   logger.trace({
                     message: '=> Manager built',
                     time: process.hrtime(startTime)
                   });
-                  var statsData = stats.toJson(typeof statsOptions === 'string' ? statsOptions : Object.assign({}, statsOptions, {
-                    warnings: true
-                  }));
-                  statsData === null || statsData === void 0 ? void 0 : (_statsData$warnings = statsData.warnings) === null || _statsData$warnings === void 0 ? void 0 : _statsData$warnings.forEach(function (e) {
-                    return logger.warn(e);
-                  });
+
+                  if (stats && stats.hasWarnings()) {
+                    stats.toJson({
+                      warnings: true
+                    }).warnings.forEach(function (e) {
+                      return logger.warn(e.message);
+                    });
+                  }
+
                   succeed(stats);
                 }
               });
             }));
 
-          case 21:
+          case 20:
           case "end":
             return _context5.stop();
         }

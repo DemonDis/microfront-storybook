@@ -1,9 +1,8 @@
 import path from 'path';
 import fse from 'fs-extra';
-import { DefinePlugin } from 'webpack';
+import { DefinePlugin, ProvidePlugin } from 'webpack';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
 import CaseSensitivePathsPlugin from 'case-sensitive-paths-webpack-plugin';
-import PnpWebpackPlugin from 'pnp-webpack-plugin';
 import VirtualModulePlugin from 'webpack-virtual-modules';
 import TerserWebpackPlugin from 'terser-webpack-plugin';
 import uiPaths from '@storybook/ui/paths';
@@ -84,7 +83,9 @@ export async function managerWebpack(_, {
     }), new CaseSensitivePathsPlugin(), // graphql sources check process variable
     new DefinePlugin(Object.assign({}, stringifyProcessEnvs(envs), {
       NODE_ENV: JSON.stringify(envs.NODE_ENV)
-    })) // isProd &&
+    })), new ProvidePlugin({
+      process: require.resolve('process/browser.js')
+    }) // isProd &&
     //   BundleAnalyzerPlugin &&
     //   new BundleAnalyzerPlugin({ analyzerMode: 'static', openAnalyzer: false }),
     ].filter(Boolean),
@@ -99,16 +100,20 @@ export async function managerWebpack(_, {
         }]
       }, {
         test: /\.(svg|ico|jpg|jpeg|png|apng|gif|eot|otf|webp|ttf|woff|woff2|cur|ani|pdf)(\?.*)?$/,
-        loader: require.resolve('file-loader'),
-        options: {
-          name: isProd ? 'static/media/[name].[contenthash:8].[ext]' : 'static/media/[path][name].[ext]'
+        type: 'asset/resource',
+        generator: {
+          filename: isProd ? 'static/media/[name].[contenthash:8][ext]' : 'static/media/[path][name][ext]'
         }
       }, {
         test: /\.(mp4|webm|wav|mp3|m4a|aac|oga)(\?.*)?$/,
-        loader: require.resolve('url-loader'),
-        options: {
-          limit: 10000,
-          name: isProd ? 'static/media/[name].[contenthash:8].[ext]' : 'static/media/[path][name].[ext]'
+        type: 'asset',
+        parser: {
+          dataUrlCondition: {
+            maxSize: 10000
+          }
+        },
+        generator: {
+          filename: isProd ? 'static/media/[name].[contenthash:8][ext]' : 'static/media/[path][name][ext]'
         }
       }]
     },
@@ -116,12 +121,7 @@ export async function managerWebpack(_, {
       extensions: ['.mjs', '.js', '.jsx', '.json', '.cjs', '.ts', '.tsx'],
       modules: ['node_modules'].concat(envs.NODE_PATH || []),
       mainFields: [modern ? 'sbmodern' : null, 'browser', 'module', 'main'].filter(Boolean),
-      alias: Object.assign({}, uiPaths),
-      plugins: [// Transparently resolve packages via PnP when needed; noop otherwise
-      PnpWebpackPlugin]
-    },
-    resolveLoader: {
-      plugins: [PnpWebpackPlugin.moduleLoader(module)]
+      alias: Object.assign({}, uiPaths)
     },
     recordsPath: resolvePathInStorybookCache('public/records.json'),
     performance: {

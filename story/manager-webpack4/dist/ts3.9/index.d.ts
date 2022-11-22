@@ -3,7 +3,7 @@ import type { Stats, Configuration } from 'webpack';
 import type { Builder, Options } from '@storybook/core-common';
 declare type WebpackBuilder = Builder<Configuration, Stats>;
 declare type BuilderStartOptions = Partial<Parameters<WebpackBuilder['start']>['0']>;
-export declare const WEBPACK_VERSION = "4";
+export declare const WEBPACK_VERSION = "5";
 export declare const getConfig: WebpackBuilder['getConfig'];
 export declare const makeStatsFromError: (err: string) => webpack.Stats;
 export declare const executor: {

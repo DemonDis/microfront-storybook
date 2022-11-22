@@ -52,8 +52,6 @@ var _htmlWebpackPlugin = _interopRequireDefault(require("html-webpack-plugin"));
 
 var _caseSensitivePathsWebpackPlugin = _interopRequireDefault(require("case-sensitive-paths-webpack-plugin"));
 
-var _pnpWebpackPlugin = _interopRequireDefault(require("pnp-webpack-plugin"));
-
 var _webpackVirtualModules = _interopRequireDefault(require("webpack-virtual-modules"));
 
 var _terserWebpackPlugin = _interopRequireDefault(require("terser-webpack-plugin"));
@@ -171,7 +169,9 @@ function _managerWebpack() {
               }), new _caseSensitivePathsWebpackPlugin.default(), // graphql sources check process variable
               new _webpack.DefinePlugin(Object.assign({}, (0, _coreCommon.stringifyProcessEnvs)(envs), {
                 NODE_ENV: JSON.stringify(envs.NODE_ENV)
-              })) // isProd &&
+              })), new _webpack.ProvidePlugin({
+                process: require.resolve('process/browser.js')
+              }) // isProd &&
               //   BundleAnalyzerPlugin &&
               //   new BundleAnalyzerPlugin({ analyzerMode: 'static', openAnalyzer: false }),
               ].filter(Boolean),
@@ -186,16 +186,20 @@ function _managerWebpack() {
                   }]
                 }, {
                   test: /\.(svg|ico|jpg|jpeg|png|apng|gif|eot|otf|webp|ttf|woff|woff2|cur|ani|pdf)(\?.*)?$/,
-                  loader: require.resolve('file-loader'),
-                  options: {
-                    name: isProd ? 'static/media/[name].[contenthash:8].[ext]' : 'static/media/[path][name].[ext]'
+                  type: 'asset/resource',
+                  generator: {
+                    filename: isProd ? 'static/media/[name].[contenthash:8][ext]' : 'static/media/[path][name][ext]'
                   }
                 }, {
                   test: /\.(mp4|webm|wav|mp3|m4a|aac|oga)(\?.*)?$/,
-                  loader: require.resolve('url-loader'),
-                  options: {
-                    limit: 10000,
-                    name: isProd ? 'static/media/[name].[contenthash:8].[ext]' : 'static/media/[path][name].[ext]'
+                  type: 'asset',
+                  parser: {
+                    dataUrlCondition: {
+                      maxSize: 10000
+                    }
+                  },
+                  generator: {
+                    filename: isProd ? 'static/media/[name].[contenthash:8][ext]' : 'static/media/[path][name][ext]'
                   }
                 }]
               },
@@ -203,12 +207,7 @@ function _managerWebpack() {
                 extensions: ['.mjs', '.js', '.jsx', '.json', '.cjs', '.ts', '.tsx'],
                 modules: ['node_modules'].concat(envs.NODE_PATH || []),
                 mainFields: [modern ? 'sbmodern' : null, 'browser', 'module', 'main'].filter(Boolean),
-                alias: Object.assign({}, _paths.default),
-                plugins: [// Transparently resolve packages via PnP when needed; noop otherwise
-                _pnpWebpackPlugin.default]
-              },
-              resolveLoader: {
-                plugins: [_pnpWebpackPlugin.default.moduleLoader(module)]
+                alias: Object.assign({}, _paths.default)
               },
               recordsPath: (0, _coreCommon.resolvePathInStorybookCache)('public/records.json'),
               performance: {

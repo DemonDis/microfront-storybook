@@ -10,7 +10,7 @@ import { clearManagerCache, useManagerCache } from './utils/manager-cache';
 import { getPrebuiltDir } from './utils/prebuilt-manager';
 let compilation;
 let reject;
-export const WEBPACK_VERSION = '4';
+export const WEBPACK_VERSION = '5';
 export const getConfig = getManagerWebpackConfig;
 export const makeStatsFromError = err => ({
   hasErrors: () => true,
@@ -92,11 +92,9 @@ const starter = async function* starterGeneratorFn({
     const packageFile = await findUp('package.json', {
       cwd: __dirname
     });
-    yield;
     const {
       version: storybookVersion
     } = await fs.readJSON(packageFile);
-    yield;
     const cacheKey = `managerConfig-webpack${WEBPACK_VERSION}@${storybookVersion}`;
 
     if (options.managerCache) {
@@ -146,8 +144,7 @@ const starter = async function* starterGeneratorFn({
   }).apply(compiler);
   const middlewareOptions = {
     publicPath: (_config$output = config.output) === null || _config$output === void 0 ? void 0 : _config$output.publicPath,
-    writeToDisk: true,
-    watchOptions: config.watchOptions || {}
+    writeToDisk: true
   };
   compilation = webpackDevMiddleware(compiler, middlewareOptions);
   router.use(compilation);
@@ -196,7 +193,6 @@ const builder = async function* builderGeneratorFn({
   yield;
   const config = await getConfig(options);
   yield;
-  const statsOptions = typeof config.stats === 'boolean' ? 'minimal' : config.stats;
   const compiler = webpackInstance(config);
 
   if (!compiler) {
@@ -217,26 +213,30 @@ const builder = async function* builderGeneratorFn({
 
         if (stats && (stats.hasErrors() || stats.hasWarnings())) {
           const {
-            warnings,
-            errors
-          } = stats.toJson(statsOptions);
-          errors.forEach(e => logger.error(e));
-          warnings.forEach(e => logger.error(e));
+            warnings = [],
+            errors = []
+          } = stats.toJson({
+            warnings: true,
+            errors: true
+          });
+          errors.forEach(e => logger.error(e.message));
+          warnings.forEach(e => logger.error(e.message));
         }
 
         process.exitCode = 1;
         fail(error || stats);
       } else {
-        var _statsData$warnings;
-
         logger.trace({
           message: '=> Manager built',
           time: process.hrtime(startTime)
         });
-        const statsData = stats.toJson(typeof statsOptions === 'string' ? statsOptions : Object.assign({}, statsOptions, {
-          warnings: true
-        }));
-        statsData === null || statsData === void 0 ? void 0 : (_statsData$warnings = statsData.warnings) === null || _statsData$warnings === void 0 ? void 0 : _statsData$warnings.forEach(e => logger.warn(e));
+
+        if (stats && stats.hasWarnings()) {
+          stats.toJson({
+            warnings: true
+          }).warnings.forEach(e => logger.warn(e.message));
+        }
+
         succeed(stats);
       }
     });
