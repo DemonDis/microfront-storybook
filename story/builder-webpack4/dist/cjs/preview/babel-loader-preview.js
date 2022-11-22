@@ -3,15 +3,24 @@
 Object.defineProperty(exports, "__esModule", {
   value: true
 });
-exports.createBabelLoader = void 0;
+exports.useBaseTsSupport = exports.createBabelLoader = void 0;
 
 var _coreCommon = require("@storybook/core-common");
 
-var _useBaseTsSupport = require("./useBaseTsSupport");
+/**
+ * Returns true if the framework can use the base TS config.
+ * @param {string} framework
+ */
+var useBaseTsSupport = function (framework) {
+  // These packages both have their own TS implementation.
+  return !['vue', 'angular'].includes(framework);
+};
+
+exports.useBaseTsSupport = useBaseTsSupport;
 
 var createBabelLoader = function (options, framework) {
   return {
-    test: (0, _useBaseTsSupport.useBaseTsSupport)(framework) ? /\.(mjs|tsx?|jsx?)$/ : /\.(mjs|jsx?)$/,
+    test: useBaseTsSupport(framework) ? /\.(mjs|tsx?|jsx?)$/ : /\.(mjs|jsx?)$/,
     use: [{
       loader: require.resolve('babel-loader'),
       options: options

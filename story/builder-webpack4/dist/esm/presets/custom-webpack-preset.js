@@ -2,6 +2,8 @@ import "core-js/modules/es.promise.js";
 import * as webpackReal from 'webpack';
 import { logger } from '@storybook/node-logger';
 import { loadCustomWebpackConfig } from '@storybook/core-common';
+import deprecate from 'util-deprecate';
+import dedent from 'ts-dedent';
 import { createDefaultWebpackConfig } from '../preview/base-webpack.config';
 export async function webpack(config, options) {
   // @ts-ignore
@@ -19,7 +21,9 @@ export async function webpack(config, options) {
   var finalDefaultConfig = await presets.apply('webpackFinal', defaultConfig, options); // through standalone webpackConfig option
 
   if (webpackConfig) {
-    return webpackConfig(finalDefaultConfig);
+    return deprecate(webpackConfig, dedent`
+        You've provided a webpack config directly in CallOptions, this is not recommended. Please use presets instead. This feature will be removed in 7.0
+      `)(finalDefaultConfig);
   } // Check whether user has a custom webpack config file and
   // return the (extended) base configuration if it's not available.
 
@@ -34,12 +38,12 @@ export async function webpack(config, options) {
     });
   }
 
-  logger.info('=> Using default Webpack4 setup');
+  logger.info('=> Using default Webpack5 setup');
   return finalDefaultConfig;
 }
 export var webpackInstance = async function () {
   return webpackReal;
 };
 export var webpackVersion = async function () {
-  return '4';
+  return '5';
 };

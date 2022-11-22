@@ -5,8 +5,7 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 import "core-js/modules/es.promise.js";
-import webpackReal, { ProgressPlugin } from 'webpack'; // @ts-ignore
-
+import webpack, { ProgressPlugin } from 'webpack';
 import webpackDevMiddleware from 'webpack-dev-middleware';
 import webpackHotMiddleware from 'webpack-hot-middleware';
 import { logger } from '@storybook/node-logger';
@@ -17,11 +16,11 @@ export var executor = {
   get: async function (options) {
     var _await$options$preset;
 
-    var version = (await options.presets.apply('webpackVersion')) || '4';
-    var webpackInstance = ((_await$options$preset = await options.presets.apply('webpackInstance')) === null || _await$options$preset === void 0 ? void 0 : _await$options$preset.default) || webpackReal;
+    var version = (await options.presets.apply('webpackVersion')) || '5';
+    var webpackInstance = ((_await$options$preset = await options.presets.apply('webpackInstance')) === null || _await$options$preset === void 0 ? void 0 : _await$options$preset.default) || webpack;
     checkWebpackVersion({
       version: version
-    }, '4', 'builder-webpack4');
+    }, '5', 'builder-webpack5');
     return webpackInstance;
   }
 };
@@ -37,22 +36,6 @@ export var getConfig = async function (options) {
     typescriptOptions: typescriptOptions,
     [`${options.framework}Options`]: frameworkOptions
   }));
-};
-export var makeStatsFromError = function (err) {
-  return {
-    hasErrors: function () {
-      return true;
-    },
-    hasWarnings: function () {
-      return false;
-    },
-    toJson: function () {
-      return {
-        warnings: [],
-        errors: [err]
-      };
-    }
-  };
 };
 var asyncIterator;
 export var bail = async function () {
@@ -87,7 +70,7 @@ export var bail = async function () {
 };
 /**
  * This function is a generator so that we can abort it mid process
- * in case of failure coming from other processes e.g. manager builder
+ * in case of failure coming from other processes e.g. preview builder
  *
  * I am sorry for making you read about generators today :')
  */
@@ -106,12 +89,25 @@ var starter = async function* starterGeneratorFn({
   var compiler = webpackInstance(config);
 
   if (!compiler) {
-    var _err = `${config.name}: missing webpack compiler at runtime!`;
-    logger.error(_err);
+    var err = `${config.name}: missing webpack compiler at runtime!`;
+    logger.error(err);
     return {
       bail: bail,
       totalTime: process.hrtime(startTime),
-      stats: makeStatsFromError(_err)
+      stats: {
+        hasErrors: function () {
+          return true;
+        },
+        hasWarnings: function () {
+          return false;
+        },
+        toJson: function () {
+          return {
+            warnings: [],
+            errors: [err]
+          };
+        }
+      }
     };
   }
 
@@ -126,16 +122,13 @@ var starter = async function* starterGeneratorFn({
   }).apply(compiler);
   var middlewareOptions = {
     publicPath: (_config$output = config.output) === null || _config$output === void 0 ? void 0 : _config$output.publicPath,
-    writeToDisk: true,
-    logLevel: 'error',
-    watchOptions: config.watchOptions || {}
+    writeToDisk: true
   };
   compilation = webpackDevMiddleware(compiler, middlewareOptions);
   router.use(compilation);
   router.use(webpackHotMiddleware(compiler));
-  var waitUntilValid = compilation.waitUntilValid.bind(compilation);
   var stats = await new Promise(function (ready, stop) {
-    waitUntilValid(ready);
+    compilation.waitUntilValid(ready);
     reject = stop;
   });
   yield;
@@ -171,16 +164,8 @@ var builder = async function* builderGeneratorFn({
   logger.info('=> Compiling preview..');
   var config = await getConfig(options);
   yield;
-  var compiler = webpackInstance(config);
-
-  if (!compiler) {
-    var _err2 = `${config.name}: missing webpack compiler at runtime!`;
-    logger.error(_err2);
-    return Promise.resolve(makeStatsFromError(_err2));
-  }
-
-  yield;
   return new Promise(function (succeed, fail) {
+    var compiler = webpackInstance(config);
     compiler.run(function (error, stats) {
       if (error || !stats || stats.hasErrors()) {
         logger.error('=> Failed to build the preview');
@@ -188,7 +173,10 @@ var builder = async function* builderGeneratorFn({
 
         if (error) {
           logger.error(error.message);
-          return fail(error);
+          compiler.close(function () {
+            return fail(error);
+          });
+          return;
         }
 
         if (stats && (stats.hasErrors() || stats.hasWarnings())) {
@@ -202,12 +190,15 @@ var builder = async function* builderGeneratorFn({
               errors = _stats$toJson$errors === void 0 ? [] : _stats$toJson$errors;
 
           errors.forEach(function (e) {
-            return logger.error(e);
+            return logger.error(e.message);
           });
           warnings.forEach(function (e) {
-            return logger.error(e);
+            return logger.error(e.message);
           });
-          return options.debugWebpack ? fail(stats) : fail(new Error('=> Webpack failed, learn more with --debug-webpack'));
+          compiler.close(function () {
+            return options.debugWebpack ? fail(stats) : fail(new Error('=> Webpack failed, learn more with --debug-webpack'));
+          });
+          return;
         }
       }
 
@@ -216,13 +207,23 @@ var builder = async function* builderGeneratorFn({
         time: process.hrtime(startTime)
       });
 
-      if (stats) {
-        stats.toJson(config.stats).warnings.forEach(function (e) {
-          return logger.warn(e);
+      if (stats && stats.hasWarnings()) {
+        stats.toJson({
+          warnings: true
+        }).warnings.forEach(function (e) {
+          return logger.warn(e.message);
         });
-      }
+      } // https://webpack.js.org/api/node/#run
+      // #15227
 
-      return succeed(stats);
+
+      compiler.close(function (closeErr) {
+        if (closeErr) {
+          return fail(closeErr);
+        }
+
+        return succeed(stats);
+      });
     });
   });
 };

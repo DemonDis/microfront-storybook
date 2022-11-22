@@ -19,11 +19,7 @@ var _terserWebpackPlugin = _interopRequireDefault(require("terser-webpack-plugin
 
 var _webpackVirtualModules = _interopRequireDefault(require("webpack-virtual-modules"));
 
-var _pnpWebpackPlugin = _interopRequireDefault(require("pnp-webpack-plugin"));
-
 var _forkTsCheckerWebpackPlugin = _interopRequireDefault(require("fork-ts-checker-webpack-plugin"));
-
-var _webpackFilterWarningsPlugin = _interopRequireDefault(require("webpack-filter-warnings-plugin"));
 
 var _paths = _interopRequireDefault(require("@storybook/theming/paths"));
 
@@ -41,7 +37,7 @@ function _objectSpread(target) { for (var i = 1; i < arguments.length; i++) { va
 
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
-var storybookPaths = ['addons', 'api', 'channels', 'channel-postmessage', 'components', 'core-events', 'router', 'theming', 'semver', 'client-api', 'client-logger', 'preview-web', 'store'].reduce(function (acc, sbPackage) {
+var storybookPaths = ['addons', 'api', 'channels', 'channel-postmessage', 'components', 'core-events', 'router', 'theming', 'semver', 'client-api', 'client-logger'].reduce(function (acc, sbPackage) {
   return _objectSpread(_objectSpread({}, acc), {}, {
     [`@storybook/${sbPackage}`]: _path.default.dirname(require.resolve(`@storybook/${sbPackage}/package.json`))
   });
@@ -62,12 +58,12 @@ var _default = async function _default(options) {
       modern = options.modern,
       features = options.features,
       serverChannelUrl = options.serverChannelUrl;
+  var envs = await presets.apply('env');
   var logLevel = await presets.apply('logLevel', undefined);
   var frameworkOptions = await presets.apply(`${framework}Options`, {});
   var headHtmlSnippet = await presets.apply('previewHead');
   var bodyHtmlSnippet = await presets.apply('previewBody');
   var template = await presets.apply('previewMainTemplate');
-  var envs = await presets.apply('env');
   var coreOptions = await presets.apply('core');
   var babelLoader = (0, _babelLoaderPreview.createBabelLoader)(babelOptions, framework);
   var isProd = configType === 'PRODUCTION';
@@ -89,7 +85,7 @@ var _default = async function _default(options) {
 
     var configEntryPath = _path.default.resolve(_path.default.join(workingDir, 'storybook-config-entry.js'));
 
-    virtualModuleMapping[configEntryPath] = (0, _coreCommon.handlebars)(await (0, _coreCommon.readTemplate)(require.resolve('@storybook/builder-webpack4/templates/virtualModuleModernEntry.js.handlebars')), {
+    virtualModuleMapping[configEntryPath] = (0, _coreCommon.handlebars)(await (0, _coreCommon.readTemplate)(require.resolve('@storybook/builder-webpack5/templates/virtualModuleModernEntry.js.handlebars')), {
       storiesFilename: storiesFilename,
       configs: configs
     } // We need to double escape `\` for webpack. We may have some in windows paths
@@ -104,7 +100,9 @@ var _default = async function _default(options) {
     var entryTemplate = await (0, _coreCommon.readTemplate)(_path.default.join(__dirname, 'virtualModuleEntry.template.js'));
     configs.forEach(function (configFilename) {
       var clientApi = storybookPaths['@storybook/client-api'];
-      var clientLogger = storybookPaths['@storybook/client-logger'];
+      var clientLogger = storybookPaths['@storybook/client-logger']; // NOTE: although this file is also from the `dist/cjs` directory, it is actually a ESM
+      // file, see https://github.com/storybookjs/storybook/pull/16727#issuecomment-986485173
+
       virtualModuleMapping[`${configFilename}-generated-config-entry.js`] = (0, _coreCommon.interpolate)(entryTemplate, {
         configFilename: configFilename,
         clientApi: clientApi,
@@ -114,9 +112,11 @@ var _default = async function _default(options) {
     });
 
     if (stories.length > 0) {
-      var storyTemplate = await (0, _coreCommon.readTemplate)(_path.default.join(__dirname, 'virtualModuleStory.template.js'));
+      var storyTemplate = await (0, _coreCommon.readTemplate)(_path.default.join(__dirname, 'virtualModuleStory.template.js')); // NOTE: this file has a `.cjs` extension as it is a CJS file (from `dist/cjs`) and runs
+      // in the user's webpack mode, which may be strict about the use of require/import.
+      // See https://github.com/storybookjs/storybook/issues/14877
 
-      var _storiesFilename = _path.default.resolve(_path.default.join(workingDir, `generated-stories-entry.js`));
+      var _storiesFilename = _path.default.resolve(_path.default.join(workingDir, `generated-stories-entry.cjs`));
 
       virtualModuleMapping[_storiesFilename] = (0, _coreCommon.interpolate)(storyTemplate, {
         frameworkImportPath: frameworkImportPath
@@ -134,18 +134,22 @@ var _default = async function _default(options) {
     bail: isProd,
     devtool: 'cheap-module-source-map',
     entry: entries,
-    // stats: 'errors-only',
     output: {
       path: _path.default.resolve(process.cwd(), outputDir),
       filename: isProd ? '[name].[contenthash:8].iframe.bundle.js' : '[name].iframe.bundle.js',
       publicPath: ''
     },
+    stats: {
+      preset: 'none',
+      logging: 'error'
+    },
     watchOptions: {
       ignored: /node_modules/
     },
-    plugins: [new _webpackFilterWarningsPlugin.default({
-      exclude: /export '\S+' was not found in 'global'/
-    }), Object.keys(virtualModuleMapping).length > 0 ? new _webpackVirtualModules.default(virtualModuleMapping) : null, new _htmlWebpackPlugin.default({
+    ignoreWarnings: [{
+      message: /export '\S+' was not found in 'global'/
+    }],
+    plugins: [Object.keys(virtualModuleMapping).length > 0 ? new _webpackVirtualModules.default(virtualModuleMapping) : null, new _htmlWebpackPlugin.default({
       filename: `iframe.html`,
       // FIXME: `none` isn't a known option
       chunksSortMode: 'none',
@@ -180,14 +184,14 @@ var _default = async function _default(options) {
         useShortDoctype: true
       }
     }), new _webpack.DefinePlugin(_objectSpread(_objectSpread({}, (0, _coreCommon.stringifyProcessEnvs)(envs)), {}, {
-      NODE_ENV: JSON.stringify(envs.NODE_ENV)
-    })), isProd ? null : new _webpack.HotModuleReplacementPlugin(), new _caseSensitivePathsWebpackPlugin.default(), quiet ? null : new _webpack.ProgressPlugin({}), shouldCheckTs ? new _forkTsCheckerWebpackPlugin.default(tsCheckOptions) : null].filter(Boolean),
+      NODE_ENV: JSON.stringify(process.env.NODE_ENV)
+    })), new _webpack.ProvidePlugin({
+      process: require.resolve('process/browser.js')
+    }), isProd ? null : new _webpack.HotModuleReplacementPlugin(), new _caseSensitivePathsWebpackPlugin.default(), quiet ? null : new _webpack.ProgressPlugin({}), shouldCheckTs ? new _forkTsCheckerWebpackPlugin.default(tsCheckOptions) : null].filter(Boolean),
     module: {
       rules: [babelLoader, (0, _coreCommon.es6Transpiler)(), {
         test: /\.md$/,
-        use: [{
-          loader: require.resolve('raw-loader')
-        }]
+        type: 'asset/source'
       }]
     },
     resolve: {
@@ -198,11 +202,10 @@ var _default = async function _default(options) {
         react: _path.default.dirname(require.resolve('react/package.json')),
         'react-dom': _path.default.dirname(require.resolve('react-dom/package.json'))
       }),
-      plugins: [// Transparently resolve packages via PnP when needed; noop otherwise
-      _pnpWebpackPlugin.default]
-    },
-    resolveLoader: {
-      plugins: [_pnpWebpackPlugin.default.moduleLoader(module)]
+      fallback: {
+        path: require.resolve('path-browserify'),
+        assert: require.resolve('browser-assert')
+      }
     },
     optimization: {
       splitChunks: {
@@ -210,7 +213,7 @@ var _default = async function _default(options) {
       },
       runtimeChunk: true,
       sideEffects: true,
-      usedExports: true,
+      usedExports: isProd,
       moduleIds: 'named',
       minimizer: isProd ? [new _terserWebpackPlugin.default({
         parallel: true,
@@ -218,7 +221,9 @@ var _default = async function _default(options) {
           sourceMap: true,
           mangle: false,
           keep_fnames: true
-        }
+        } // It looks like the types from `@types/terser-webpack-plugin` are not matching the latest version of
+        // Webpack yet
+
       })] : []
     },
     performance: {

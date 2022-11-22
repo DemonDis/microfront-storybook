@@ -14,7 +14,13 @@ var _nodeLogger = require("@storybook/node-logger");
 
 var _coreCommon = require("@storybook/core-common");
 
+var _utilDeprecate = _interopRequireDefault(require("util-deprecate"));
+
+var _tsDedent = _interopRequireDefault(require("ts-dedent"));
+
 var _baseWebpack = require("../preview/base-webpack.config");
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 function _getRequireWildcardCache(nodeInterop) { if (typeof WeakMap !== "function") return null; var cacheBabelInterop = new WeakMap(); var cacheNodeInterop = new WeakMap(); return (_getRequireWildcardCache = function (nodeInterop) { return nodeInterop ? cacheNodeInterop : cacheBabelInterop; })(nodeInterop); }
 
@@ -36,7 +42,9 @@ async function webpack(config, options) {
   var finalDefaultConfig = await presets.apply('webpackFinal', defaultConfig, options); // through standalone webpackConfig option
 
   if (webpackConfig) {
-    return webpackConfig(finalDefaultConfig);
+    return (0, _utilDeprecate.default)(webpackConfig, (0, _tsDedent.default)`
+        You've provided a webpack config directly in CallOptions, this is not recommended. Please use presets instead. This feature will be removed in 7.0
+      `)(finalDefaultConfig);
   } // Check whether user has a custom webpack config file and
   // return the (extended) base configuration if it's not available.
 
@@ -52,7 +60,7 @@ async function webpack(config, options) {
     });
   }
 
-  _nodeLogger.logger.info('=> Using default Webpack4 setup');
+  _nodeLogger.logger.info('=> Using default Webpack5 setup');
 
   return finalDefaultConfig;
 }
@@ -64,7 +72,7 @@ var webpackInstance = async function () {
 exports.webpackInstance = webpackInstance;
 
 var webpackVersion = async function () {
-  return '4';
+  return '5';
 };
 
 exports.webpackVersion = webpackVersion;

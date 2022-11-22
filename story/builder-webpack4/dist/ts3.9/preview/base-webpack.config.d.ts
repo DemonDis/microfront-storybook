@@ -1,2 +1,3 @@
 import type { Options } from '@storybook/core-common';
-export declare function createDefaultWebpackConfig(storybookBaseConfig: any, options: Options): Promise<any>;
+import type { Configuration } from 'webpack';
+export declare function createDefaultWebpackConfig(storybookBaseConfig: Configuration, options: Options): Promise<Configuration>;
