@@ -5,11 +5,6 @@
     "start": "start-storybook -p 6006",
     "build": "build-storybook"
   },
-  "license": "MIT",
-  "author": {
-    "name": "Jack Herrington",
-    "email": "jherr@pobox.com"
-  },
   "devDependencies": {
     "@babel/core": "^7.15.8",
     "@babel/plugin-transform-runtime": "^7.15.8",
