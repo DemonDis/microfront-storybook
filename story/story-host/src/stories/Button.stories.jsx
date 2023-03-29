@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Button } from './Button';
-import { ButtonX } from 'story_remote/Button';
+import ButtonX from 'story_remote/Button';
 
 // More on default export: https://storybook.js.org/docs/react/writing-stories/introduction#default-export
 export default {
@@ -11,14 +11,14 @@ export default {
 };
 
 
-export const Primary = () => {
+export const Primary = (args) => {
   return (
-    <Button/>
+    <Button {...args}/>
   )
 };
-export const Primary2 = () => {
+export const Primary2  = (args) => {
   return (
-    <ButtonX/>
+    <ButtonX {...args}/>
   )
 };
 
